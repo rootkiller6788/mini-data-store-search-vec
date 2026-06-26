@@ -1,0 +1,26 @@
+# Build artifacts
+*.o
+*.obj
+*.exe
+*.out
+*.so
+*.a
+*.dll
+*.lib
+*.dylib
+*.dSYM
+
+# Build directories
+build/
+bin/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
