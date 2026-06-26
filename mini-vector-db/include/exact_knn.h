@@ -25,4 +25,22 @@ KNNResult knn_search(const Vector *dataset, int n,
 
 void knn_print_result(const KNNResult *result);
 
+float knn_recall_at_k(const KNNResult *ground_truth,
+                      const KNNResult *approx,
+                      int k);
+
+int knn_intersect_count(const KNNResult *a, const KNNResult *b);
+
+void knn_result_init(KNNResult *r, int k);
+
+void knn_result_sort(KNNResult *r);
+
+void knn_result_add(KNNResult *r, int id, float dist);
+
+void knn_result_prune(KNNResult *r, int k);
+
+float knn_result_max_dist(const KNNResult *r);
+
+int knn_result_has_id(const KNNResult *r, int id);
+
 #endif

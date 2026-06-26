@@ -37,6 +37,9 @@ static void bloom_init(BloomFilter *bf, uint32_t num_keys) {
     bf->num_bits = num_keys * bf->bits_per_key;
     if (bf->num_bits < 64) bf->num_bits = 64;
     bf->num_bytes = (bf->num_bits + 7) / 8;
+    /* Round num_bits up to multiple of 8 so that on-disk size
+       (num_bytes) and in-memory bit count are consistent. */
+    bf->num_bits = bf->num_bytes * 8;
     bf->bit_array = (uint8_t *)calloc(bf->num_bytes, 1);
 }
 
@@ -219,14 +222,13 @@ int sstable_write(const char *filename,
     }
 
     /* Write bloom filter */
-    uint32_t bloom_start = (uint32_t)ftell(fp);
     fwrite(&bf.num_bytes, sizeof(uint32_t), 1, fp);
     fwrite(bf.bit_array, 1, bf.num_bytes, fp);
 
     /* Write footer */
     SSTableFooter footer;
     footer.index_block_offset = index_start;
-    footer.index_block_size   = iblk_sz + 4;
+    footer.index_block_size   = iblk_sz;  /* already includes num_entries field */
     footer.magic_number       = SSTABLE_MAGIC;
     memset(footer.padding, 0, sizeof(footer.padding));
     fwrite(&footer, sizeof(SSTableFooter), 1, fp);
@@ -327,32 +329,34 @@ static int block_search(SSTableDataBlock *block,
                         const uint8_t *target_key, uint32_t target_len,
                         uint8_t *value_out, uint32_t *value_len_out)
 {
-    /* Use restart points to narrow down */
-    uint32_t lo_r = 0, hi_r = block->num_restarts;
-    while (lo_r < hi_r) {
-        uint32_t mid = lo_r + (hi_r - lo_r) / 2;
-        uint32_t off = block->restart_offsets[mid];
-        /* Decode the full key at this restart point */
-        uint32_t pos = off;
-        uint32_t shared   = *(uint32_t *)(block->data + pos); pos += 4;
-        uint32_t nonshared= *(uint32_t *)(block->data + pos); pos += 4;
-        uint32_t vlen     = *(uint32_t *)(block->data + pos); pos += 4;
-        (void)shared; /* at restart, shared==0 */
-        int cmp = memcmp(block->data + pos, target_key,
-                         nonshared < target_len ? nonshared : target_len);
-        if (cmp == 0 && nonshared != target_len)
-            cmp = nonshared < target_len ? -1 : 1;
-        if (cmp < 0) lo_r = mid + 1;
-        else hi_r = mid;
+    /* Helper: get key at restart index i */
+    #define RESTART_KEY(i) (block->data + block->restart_offsets[(i)] + 12)
+    #define RESTART_KEYLEN(i) (*(uint32_t *)(block->data + block->restart_offsets[(i)] + 4))
+
+    uint32_t num_r = block->num_restarts;
+    if (num_r == 0) return 0;
+
+    /* Binary search: last restart where key <= target */
+    uint32_t lo = 0, hi = num_r - 1;
+    while (lo < hi) {
+        uint32_t mid = lo + (hi - lo + 1) / 2;  /* upper mid for last-≤ */
+        uint32_t rklen = RESTART_KEYLEN(mid);
+        const uint8_t *rkey = RESTART_KEY(mid);
+        uint32_t cmp_len = rklen < target_len ? rklen : target_len;
+        int cmp = memcmp(rkey, target_key, cmp_len);
+        if (cmp == 0 && rklen != target_len)
+            cmp = rklen < target_len ? -1 : 1;
+        if (cmp <= 0) lo = mid;
+        else          hi = mid - 1;
     }
 
-    uint32_t start_off = (lo_r > 0) ? block->restart_offsets[lo_r - 1] : 0;
-    uint32_t end_off   = (lo_r < block->num_restarts)
-        ? block->restart_offsets[lo_r] : block->data_size;
+    /* Linear scan from restart[lo] to restart[lo+1] or end of data */
+    uint32_t start_off = block->restart_offsets[lo];
+    uint32_t end_off   = (lo + 1 < num_r)
+        ? block->restart_offsets[lo + 1] : block->data_size;
 
     uint32_t pos = start_off;
     uint8_t prev_key[256];
-    uint32_t prev_len = 0;
 
     while (pos < end_off) {
         uint32_t shared    = *(uint32_t *)(block->data + pos); pos += 4;
@@ -373,10 +377,12 @@ static int block_search(SSTableDataBlock *block,
             return 1;
         }
         memcpy(prev_key, cur_key, cur_len);
-        prev_len = cur_len;
         pos += vlen;
     }
     return 0;
+
+    #undef RESTART_KEY
+    #undef RESTART_KEYLEN
 }
 
 /* ─────────────────────────────────────────────
@@ -465,7 +471,6 @@ static int merge_node_load_entry(SSTableMergeNode *node) {
     uint32_t pos = db->restart_offsets[0]; /* Start from first restart for simplicity */
     uint32_t cur_entry = 0;
     uint8_t prev_key[256];
-    uint32_t prev_len = 0;
 
     while (pos < db->data_size) {
         uint32_t shared    = *(uint32_t *)(db->data + pos); pos += 4;
@@ -479,7 +484,6 @@ static int merge_node_load_entry(SSTableMergeNode *node) {
         node->value_len = vlen;
         pos += vlen;
         memcpy(prev_key, node->key, node->key_len);
-        prev_len = node->key_len;
 
         if (cur_entry == node->entry_idx) {
             return 0;

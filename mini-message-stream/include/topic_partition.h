@@ -5,8 +5,8 @@
 #include <stddef.h>
 
 #define MAX_PARTITIONS      8
-#define MAX_SEGMENTS        16
-#define MAX_RECORDS_PER_SEG 1000
+#define MAX_SEGMENTS        8
+#define MAX_RECORDS_PER_SEG 128
 #define MAX_KEY_LEN         256
 #define MAX_VALUE_LEN       4096
 #define MAX_HEADER_LEN      1024

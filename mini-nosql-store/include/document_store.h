@@ -9,6 +9,7 @@
 #define DOC_MAX_COLLECTION  64
 #define DOC_MAX_FIELDS      32
 #define DOC_MAX_FIELD_LEN   64
+#define DOC_MAX_VALUE_LEN  256
 #define DOC_MAX_INDEXES     16
 #define DOC_INDEX_BUCKETS   256
 

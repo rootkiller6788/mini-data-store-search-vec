@@ -88,14 +88,14 @@ bool cypher_parse(const char *query_string, QueryPattern *pattern) {
     parse_labels(&p, nm1);
 
     skip_whitespace(&p);
-    if (**p == '{') {
+    if (*p == '{') {
         p++;
         skip_whitespace(&p);
-        while (**p && **p != '}') {
+        while (*p && *p != '}') {
             char key[MAX_KEY_LEN], value[MAX_VALUE_LEN];
             if (parse_identifier(&p, key, MAX_KEY_LEN)) {
                 skip_whitespace(&p);
-                if (**p == ':') {
+                if (*p == ':') {
                     p++;
                     if (parse_string(&p, value, MAX_VALUE_LEN)) {
                         if (nm1->filter_count < MAX_NODE_PROPERTIES) {
@@ -109,18 +109,18 @@ bool cypher_parse(const char *query_string, QueryPattern *pattern) {
                 }
             }
             skip_whitespace(&p);
-            if (**p == ',') p++;
+            if (*p == ',') p++;
             skip_whitespace(&p);
         }
-        if (**p == '}') p++;
+        if (*p == '}') p++;
     }
 
     if (!match_char(&p, ')')) return false;
 
     skip_whitespace(&p);
-    if (**p == '-') {
+    if (*p == '-') {
         p++;
-        if (**p == '[') {
+        if (*p == '[') {
             p++;
             EdgeMatch *em = &pattern->edge_matches[0];
             pattern->edge_match_count = 1;
@@ -130,20 +130,20 @@ bool cypher_parse(const char *query_string, QueryPattern *pattern) {
                 skip_whitespace(&p);
             }
             skip_whitespace(&p);
-            if (**p == ']') p++;
-            if (**p == '-') p++;
-            if (**p == '>') { p++; em->direction = DIR_RIGHT; }
+            if (*p == ']') p++;
+            if (*p == '-') p++;
+            if (*p == '>') { p++; em->direction = DIR_RIGHT; }
         } else {
             EdgeMatch *em = &pattern->edge_matches[0];
             pattern->edge_match_count = 1;
             em->direction = DIR_RIGHT;
-            if (**p == '>') { p++; em->direction = DIR_RIGHT; }
+            if (*p == '>') { p++; em->direction = DIR_RIGHT; }
         }
-    } else if (**p == '<') {
+    } else if (*p == '<') {
         p++;
-        if (**p == '-') {
+        if (*p == '-') {
             p++;
-            if (**p == '[') {
+            if (*p == '[') {
                 p++;
                 EdgeMatch *em = &pattern->edge_matches[0];
                 pattern->edge_match_count = 1;
@@ -151,7 +151,7 @@ bool cypher_parse(const char *query_string, QueryPattern *pattern) {
                 parse_identifier(&p, em->variable, MAX_LABEL_LEN);
                 parse_edge_type(&p, em);
                 skip_whitespace(&p);
-                if (**p == ']') p++;
+                if (*p == ']') p++;
             } else {
                 EdgeMatch *em = &pattern->edge_matches[0];
                 pattern->edge_match_count = 1;
@@ -170,14 +170,14 @@ bool cypher_parse(const char *query_string, QueryPattern *pattern) {
     parse_labels(&p, nm2);
 
     skip_whitespace(&p);
-    if (**p == '{') {
+    if (*p == '{') {
         p++;
         skip_whitespace(&p);
-        while (**p && **p != '}') {
+        while (*p && *p != '}') {
             char key[MAX_KEY_LEN], value[MAX_VALUE_LEN];
             if (parse_identifier(&p, key, MAX_KEY_LEN)) {
                 skip_whitespace(&p);
-                if (**p == ':') {
+                if (*p == ':') {
                     p++;
                     if (parse_string(&p, value, MAX_VALUE_LEN)) {
                         if (nm2->filter_count < MAX_NODE_PROPERTIES) {
@@ -191,16 +191,16 @@ bool cypher_parse(const char *query_string, QueryPattern *pattern) {
                 }
             }
             skip_whitespace(&p);
-            if (**p == ',') p++;
+            if (*p == ',') p++;
             skip_whitespace(&p);
         }
-        if (**p == '}') p++;
+        if (*p == '}') p++;
     }
 
     if (!match_char(&p, ')')) return false;
 
     skip_whitespace(&p);
-    if (**p != '\0') return false;
+    if (*p != '\0') return false;
 
     return true;
 }

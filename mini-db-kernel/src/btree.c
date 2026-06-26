@@ -34,10 +34,10 @@ static void insert_nonfull(BTreeNode *node, int32_t key, int32_t value) {
     } else {
         while (i >= 0 && node->keys[i] > key) i--;
         i++;
-        BTreeNode *child = (BTreeNode *)(intptr_t)node->children[i];
+        BTreeNode *child = (BTreeNode *)node->children[i];
         if (!child) {
             child = node_create(true);
-            node->children[i] = (int32_t)(intptr_t)child;
+            node->children[i] = (intptr_t)child;
         }
         if (child->num_keys == BTREE_ORDER - 1) {
             BTreeNode *new_node = node_create(child->is_leaf);
@@ -55,13 +55,13 @@ static void insert_nonfull(BTreeNode *node, int32_t key, int32_t value) {
                 new_node->next_leaf = child->next_leaf;
                 child->next_leaf = new_node->page_id;
             }
-            child->num_keys = mid;
+            child->num_keys = mid + 1;
             for (int32_t j = node->num_keys; j > i; j--) {
                 node->keys[j] = node->keys[j - 1];
                 node->children[j + 1] = node->children[j];
             }
             node->keys[i] = child->keys[mid];
-            node->children[i + 1] = (int32_t)(intptr_t)new_node;
+            node->children[i + 1] = (intptr_t)new_node;
             node->num_keys++;
             if (key > node->keys[i]) i++;
         }
@@ -76,7 +76,7 @@ bool btree_insert(BTree *root, int32_t key, int32_t value) {
     BTreeNode *r = *root;
     if (r->num_keys == BTREE_ORDER - 1) {
         BTreeNode *new_root = node_create(false);
-        new_root->children[0] = (int32_t)(intptr_t)r;
+        new_root->children[0] = (intptr_t)r;
         BTreeNode *new_node = node_create(r->is_leaf);
         int32_t mid = (BTREE_ORDER - 1) / 2;
         new_node->num_keys = r->num_keys - mid - 1;
@@ -92,9 +92,9 @@ bool btree_insert(BTree *root, int32_t key, int32_t value) {
             new_node->next_leaf = r->next_leaf;
             r->next_leaf = new_node->page_id;
         }
-        r->num_keys = mid;
+        r->num_keys = mid + 1;
         new_root->keys[0] = r->keys[mid];
-        new_root->children[1] = (int32_t)(intptr_t)new_node;
+        new_root->children[1] = (intptr_t)new_node;
         new_root->num_keys = 1;
         *root = new_root;
         if (key > new_root->keys[0]) {
@@ -108,36 +108,48 @@ bool btree_insert(BTree *root, int32_t key, int32_t value) {
     return true;
 }
 
+/*
+ * B+Tree Search (L5: Point Query)
+ *
+ * B+Tree 的核心性质: 所有数据存储在叶子节点，内部节点只存储路由键。
+ * 因此搜索必须遍历到叶子节点才能获取 value。
+ *
+ * 复杂度: O(log_B N) — 树的高度
+ * 对应 CMU 15-445 Lecture 07: Tree Indexes
+ */
 bool btree_search(BTree root, int32_t key, int32_t *value) {
     if (!root) return false;
     BTreeNode *node = root;
-    while (node) {
+    /* Traverse to leaf: internal nodes only guide the search */
+    while (node && !node->is_leaf) {
         int32_t i = 0;
         while (i < node->num_keys && node->keys[i] < key) i++;
-        if (node->is_leaf) {
-            if (i < node->num_keys && node->keys[i] == key) {
+        node = (BTreeNode *)node->children[i];
+    }
+    /* Now at leaf: search for key equality */
+    if (node && node->is_leaf) {
+        for (int32_t i = 0; i < node->num_keys; i++) {
+            if (node->keys[i] == key) {
                 *value = node->values[i];
                 return true;
             }
-            return false;
         }
-        if (i < node->num_keys && node->keys[i] == key) {
-            *value = node->values[i];
-            return true;
-        }
-        node = (BTreeNode *)(intptr_t)node->children[i];
     }
     return false;
 }
 
+/*
+ * Find the leaf node that should contain the given key
+ * B+Tree invariant: for key K, follow children[idx] where
+ * idx is the first index where keys[idx] > K (or num_keys)
+ */
 static BTreeNode *find_leaf(BTree root, int32_t key) {
     if (!root) return NULL;
     BTreeNode *node = root;
-    while (!node->is_leaf) {
+    while (node && !node->is_leaf) {
         int32_t i = 0;
-        while (i < node->num_keys && node->keys[i] <= key) i++;
-        if (i == 0) i = 1;
-        node = (BTreeNode *)(intptr_t)node->children[i - 1];
+        while (i < node->num_keys && node->keys[i] < key) i++;
+        node = (BTreeNode *)node->children[i];
     }
     return node;
 }
@@ -153,7 +165,7 @@ static BTreeNode *find_page(BTree root, int32_t page_id) {
         if (node->page_id == page_id) return node;
         if (!node->is_leaf) {
             for (int32_t i = 0; i <= node->num_keys; i++) {
-                BTreeNode *child = (BTreeNode *)(intptr_t)node->children[i];
+                BTreeNode *child = (BTreeNode *)node->children[i];
                 if (child) {
                     if (child->page_id == page_id) return child;
                     stack[top++] = child;
@@ -211,8 +223,8 @@ static bool delete_from_tree(BTreeNode *node, int32_t key) {
         return false;
     }
     if (idx < node->num_keys && node->keys[idx] == key) {
-        BTreeNode *left_child = (BTreeNode *)(intptr_t)node->children[idx];
-        BTreeNode *right_child = (BTreeNode *)(intptr_t)node->children[idx + 1];
+        BTreeNode *left_child = (BTreeNode *)node->children[idx];
+        BTreeNode *right_child = (BTreeNode *)node->children[idx + 1];
         if (left_child && left_child->num_keys > (BTREE_ORDER - 1) / 2) {
             int32_t pred = left_child->keys[left_child->num_keys - 1];
             node->keys[idx] = pred;
@@ -247,11 +259,11 @@ static bool delete_from_tree(BTreeNode *node, int32_t key) {
             return delete_from_tree(left_child, key);
         }
     } else {
-        BTreeNode *child = (BTreeNode *)(intptr_t)node->children[idx];
+        BTreeNode *child = (BTreeNode *)node->children[idx];
         bool result = delete_from_tree(child, key);
         if (child->num_keys < (BTREE_ORDER - 1) / 2) {
-            BTreeNode *left_sib = idx > 0 ? (BTreeNode *)(intptr_t)node->children[idx - 1] : NULL;
-            BTreeNode *right_sib = idx < node->num_keys ? (BTreeNode *)(intptr_t)node->children[idx + 1] : NULL;
+            BTreeNode *left_sib = idx > 0 ? (BTreeNode *)node->children[idx - 1] : NULL;
+            BTreeNode *right_sib = idx < node->num_keys ? (BTreeNode *)node->children[idx + 1] : NULL;
             if (left_sib && left_sib->num_keys > (BTREE_ORDER - 1) / 2) {
                 for (int32_t j = child->num_keys; j > 0; j--) {
                     child->keys[j] = child->keys[j - 1];
@@ -307,6 +319,7 @@ static bool delete_from_tree(BTreeNode *node, int32_t key) {
         }
         return result;
     }
+    return false;
 }
 
 bool btree_delete(BTree *root, int32_t key) {
@@ -314,7 +327,7 @@ bool btree_delete(BTree *root, int32_t key) {
     bool result = delete_from_tree(*root, key);
     if ((*root)->num_keys == 0 && !(*root)->is_leaf) {
         BTreeNode *old = *root;
-        *root = (BTreeNode *)(intptr_t)old->children[0];
+        *root = (BTreeNode *)old->children[0];
         free(old);
     }
     return result;
@@ -334,7 +347,7 @@ static void print_node(BTreeNode *node, int32_t depth) {
     printf("\n");
     if (!node->is_leaf) {
         for (int32_t i = 0; i <= node->num_keys; i++) {
-            BTreeNode *child = (BTreeNode *)(intptr_t)node->children[i];
+            BTreeNode *child = (BTreeNode *)node->children[i];
             if (child) print_node(child, depth + 1);
         }
     }

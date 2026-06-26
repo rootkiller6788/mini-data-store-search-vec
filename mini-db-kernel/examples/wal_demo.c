@@ -12,7 +12,6 @@ int main(void) {
     uint8_t data_b[] = "Account B: $200";
     uint8_t data_a_new[] = "Account A: $50";
     uint8_t data_b_new[] = "Account B: $250";
-    uint8_t empty[4096] = {0};
 
     printf("1. Transaction T1 (committed): Transfer $50 from A to B\n");
     wal_write(&wm, WAL_UPDATE, 1, 0, 1,

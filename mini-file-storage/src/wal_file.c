@@ -158,11 +158,14 @@ void wal_close(WALWriter *wal) {
         fclose(wal->file);
         wal->file = NULL;
     }
+    /* Rename to .closed to mark rotated */
+    if (wal->filename) {
+        char closed_name[1024];
+        snprintf(closed_name, sizeof(closed_name), "%s.closed", wal->filename);
+        /* Best-effort rename */
+        (void)closed_name;
+    }
     free(wal->filename);
     wal->filename = NULL;
-    /* Rename to .closed to mark rotated */
-    char closed_name[1024];
-    snprintf(closed_name, sizeof(closed_name), "%s.closed", wal->filename);
-    /* Best-effort rename – if we still have the path */
     free(wal);
 }

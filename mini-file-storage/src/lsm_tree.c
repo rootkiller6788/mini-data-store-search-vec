@@ -242,13 +242,9 @@ int lsm_get(LSMTree *tree,
         return 1;
     }
 
-    /* 2. Check immutable memtables (from newest to oldest) */
-    ImmutableMem *imm = tree->imm_tail; /* newest first? Actually search all */
-    /* Reversed: actually we want to search newest first, but linked list
-       is head=oldest, tail=newest. Let's iterate head first for correctness,
-       but newer entries override older ones.
-       Since each flush produces separate SSTables, we search immutables
-       from tail (newest) to head (oldest). */
+    /* 2. Check immutable memtables (from newest to oldest)
+       linked list is head=oldest, tail=newest. Search from tail (newest)
+       to head (oldest) so newer entries override older ones. */
     /* Build a stack of immutables for reverse traversal */
     {
         ImmutableMem *stack[LSM_IMMUTABLE_MAX + 1];

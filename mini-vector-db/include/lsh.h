@@ -32,5 +32,6 @@ void lsh_init(LSHTable *table);
 void lsh_insert(LSHTable *table, const Vector *vec, int id);
 void lsh_search(const LSHTable *table, const Vector *query,
                 int k, int num_probes, KNNResult *result);
+void lsh_print_stats(const LSHTable *table);
 
 #endif

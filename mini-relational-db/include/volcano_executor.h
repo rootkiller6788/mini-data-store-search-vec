@@ -37,7 +37,7 @@ struct Executor {
 
 Executor *exec_create_seq_scan(Table *table);
 Executor *exec_create_filter(Executor *child, const WhereClause *wc);
-Executor *exec_create_project(Executor *child, int num_cols, char cols[][SQL_MAX_NAME]);
+Executor *exec_create_project(Executor *child, int num_cols, const char cols[][SQL_MAX_NAME]);
 Executor *exec_create_sort(Executor *child, const char *col_name);
 Executor *exec_create_hash_join(Executor *outer, Executor *inner,
                                  const char *outer_key, const char *inner_key);

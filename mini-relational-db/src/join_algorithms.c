@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 static unsigned int hash_string(const char *str) {
     unsigned int h = 5381;
@@ -67,6 +68,8 @@ void hash_table_destroy(HashTable *ht) {
         ht->buckets[i].count = 0;
     }
 }
+
+static int inner_rows_from_ht(HashTable *ht);
 
 int join_hash_build(HashTable *ht, Table *inner, const char *inner_key) {
     if (!ht || !inner || !inner_key) return -1;

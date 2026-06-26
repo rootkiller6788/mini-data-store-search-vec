@@ -4,6 +4,14 @@
 #include <time.h>
 #include "lsm_tree.h"
 
+#ifdef _WIN32
+#include <direct.h>
+#define rmdir_p(d) _rmdir(d)
+#else
+#include <unistd.h>
+#define rmdir_p(d) rmdir(d)
+#endif
+
 #define NUM_KEYS 1000
 
 int main(void) {
@@ -85,7 +93,7 @@ int main(void) {
     remove("./lsm_demo_data/level1_000000.sst");
     remove("./lsm_demo_data/MINI_LOG");
     remove("./lsm_demo_data/MINI_LOG.closed");
-    rmdir("./lsm_demo_data");
+    rmdir_p("./lsm_demo_data");
 
     return 0;
 }

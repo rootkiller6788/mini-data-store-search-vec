@@ -10,9 +10,6 @@
 #define DIM         128
 #define K           5
 
-extern float knn_recall_at_k(const KNNResult *ground_truth,
-                             const KNNResult *approx, int k);
-
 int main(void)
 {
     srand((unsigned)time(NULL));

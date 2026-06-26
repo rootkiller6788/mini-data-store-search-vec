@@ -203,6 +203,66 @@ static int32_t ends_with(const char *str, int32_t len, const char *suffix) {
     return strncmp(str + len - slen, suffix, (size_t)slen) == 0;
 }
 
+/* Check if word ends with double consonant (*d rule in Porter) */
+static int32_t ends_with_double_consonant(const char *word, int32_t len) {
+    if (len < 2) return 0;
+    char c1 = (char)tolower((unsigned char)word[len - 1]);
+    char c2 = (char)tolower((unsigned char)word[len - 2]);
+    if (c1 != c2) return 0;
+    /* Must be a consonant */
+    if (c1 == 'a' || c1 == 'e' || c1 == 'i' || c1 == 'o' || c1 == 'u') return 0;
+    if (c1 == 'y' && len > 2) return 0; /* y can be vowel after position 0 */
+    return 1;
+}
+
+/* Check if word ends with CVC (*o rule) where second C is not w,x,y */
+static int32_t ends_with_cvc(const char *word, int32_t len) {
+    if (len < 3) return 0;
+    char c3 = (char)tolower((unsigned char)word[len - 1]);
+    char c2 = (char)tolower((unsigned char)word[len - 2]);
+    char c1 = (char)tolower((unsigned char)word[len - 3]);
+
+    /* Check c3 is consonant (not w,x,y) */
+    if (c3 == 'a' || c3 == 'e' || c3 == 'i' || c3 == 'o' || c3 == 'u') return 0;
+    if (c3 == 'w' || c3 == 'x' || c3 == 'y') return 0;
+
+    /* Check c2 is vowel */
+    if (c2 != 'a' && c2 != 'e' && c2 != 'i' && c2 != 'o' && c2 != 'u') {
+        if (c2 != 'y' || len <= 3) return 0;
+    }
+
+    /* Check c1 is consonant */
+    if (c1 == 'a' || c1 == 'e' || c1 == 'i' || c1 == 'o' || c1 == 'u') return 0;
+    if (c1 == 'y' && (len - 3) > 0) return 0;
+
+    return 1;
+}
+
+/* Porter step 1b1: applied after removing -ed or -ing */
+static int32_t porter_step_1b1(char *word, int32_t len) {
+    if (ends_with(word, len, "at") || ends_with(word, len, "bl") ||
+        ends_with(word, len, "iz")) {
+        word[len] = 'e';
+        word[len + 1] = '\0';
+        return len + 1;
+    }
+    /* *d rule: double consonant at end (not l,s,z) → remove last */
+    if (ends_with_double_consonant(word, len)) {
+        char last = (char)tolower((unsigned char)word[len - 1]);
+        if (last != 'l' && last != 's' && last != 'z') {
+            word[len - 1] = '\0';
+            return len - 1;
+        }
+    }
+    /* *o rule: m=1 and ends with CVC → add 'e' */
+    if (measure_m(word, len) == 1 && ends_with_cvc(word, len)) {
+        word[len] = 'e';
+        word[len + 1] = '\0';
+        return len + 1;
+    }
+    return len;
+}
+
 int32_t porter_stem(char *word) {
     int32_t len = (int32_t)strlen(word);
     if (len < 3) return len;
@@ -230,15 +290,11 @@ int32_t porter_stem(char *word) {
     } else if (ends_with(word, len, "ed") && word_has_vowel(word, len - 2)) {
         word[len - 2] = '\0';
         len -= 2;
-        if (ends_with(word, len, "at")) { word[len] = 'e'; word[len + 1] = '\0'; len++; }
-        else if (ends_with(word, len, "bl")) { word[len] = 'e'; word[len + 1] = '\0'; len++; }
-        else if (ends_with(word, len, "iz")) { word[len] = 'e'; word[len + 1] = '\0'; len++; }
+        len = porter_step_1b1(word, len);
     } else if (ends_with(word, len, "ing") && word_has_vowel(word, len - 3)) {
         word[len - 3] = '\0';
         len -= 3;
-        if (ends_with(word, len, "at")) { word[len] = 'e'; word[len + 1] = '\0'; len++; }
-        else if (ends_with(word, len, "bl")) { word[len] = 'e'; word[len + 1] = '\0'; len++; }
-        else if (ends_with(word, len, "iz")) { word[len] = 'e'; word[len + 1] = '\0'; len++; }
+        len = porter_step_1b1(word, len);
     }
 
     if (ends_with(word, len, "ational")) {

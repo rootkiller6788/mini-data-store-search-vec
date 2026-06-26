@@ -126,7 +126,7 @@ int sql_parse_select(const char *sql, SQLStmt *stmt) {
             if (!tok_read_identifier(&t, stmt->columns[stmt->num_columns], SQL_MAX_NAME))
                 return 0;
             stmt->num_columns++;
-        } while (t.pos < t->len && t.sql[t.pos] == ',' &&
+        } while (t.pos < t.len && t.sql[t.pos] == ',' &&
                  (t.pos++, tok_skip_whitespace(&t), 1));
     }
 
@@ -171,13 +171,13 @@ int sql_parse_create(const char *sql, SQLStmt *stmt) {
 
     if (!tok_read_identifier(&t, stmt->table, SQL_MAX_NAME)) return 0;
 
-    if (t.pos >= t->len || t.sql[t.pos] != '(') return 0;
+    if (t.pos >= t.len || t.sql[t.pos] != '(') return 0;
     t.pos++;
 
     stmt->num_col_defs = 0;
     do {
         tok_skip_whitespace(&t);
-        if (t.pos >= t->len) return 0;
+        if (t.pos >= t.len) return 0;
         if (t.sql[t.pos] == ')') { t.pos++; break; }
 
         ColumnDef *cd = &stmt->col_defs[stmt->num_col_defs];
@@ -187,12 +187,12 @@ int sql_parse_create(const char *sql, SQLStmt *stmt) {
             cd->type = SQL_TYPE_INT;
         } else if (tok_match_word(&t, "VARCHAR")) {
             cd->type = SQL_TYPE_VARCHAR;
-            if (t.pos < t->len && t.sql[t.pos] == '(') {
+            if (t.pos < t.len && t.sql[t.pos] == '(') {
                 t.pos++;
                 char num[16];
                 if (!tok_read_value(&t, num, 16)) return 0;
                 cd->length = atoi(num);
-                if (t.pos < t->len && t.sql[t.pos] == ')') t.pos++;
+                if (t.pos < t.len && t.sql[t.pos] == ')') t.pos++;
             }
         } else if (tok_match_word(&t, "TEXT")) {
             cd->type = SQL_TYPE_TEXT;
@@ -204,7 +204,7 @@ int sql_parse_create(const char *sql, SQLStmt *stmt) {
         if (stmt->num_col_defs >= SQL_MAX_COLUMNS) return 0;
 
         tok_skip_whitespace(&t);
-        if (t.pos < t->len && t.sql[t.pos] == ',') t.pos++;
+        if (t.pos < t.len && t.sql[t.pos] == ',') t.pos++;
     } while (1);
 
     if (!tok_match_word(&t, ")")) {} /* closing paren may already be consumed */
@@ -225,13 +225,13 @@ int sql_parse_insert(const char *sql, SQLStmt *stmt) {
 
     if (!tok_match_word(&t, "VALUES")) return 0;
 
-    if (t.pos >= t->len || t.sql[t.pos] != '(') return 0;
+    if (t.pos >= t.len || t.sql[t.pos] != '(') return 0;
     t.pos++;
 
     stmt->num_values = 0;
     do {
         tok_skip_whitespace(&t);
-        if (t.pos >= t->len) return 0;
+        if (t.pos >= t.len) return 0;
         if (t.sql[t.pos] == ')') { t.pos++; break; }
 
         if (!tok_read_value(&t, stmt->values[stmt->num_values], SQL_MAX_NAME))
@@ -240,7 +240,7 @@ int sql_parse_insert(const char *sql, SQLStmt *stmt) {
         if (stmt->num_values >= SQL_MAX_COLUMNS) return 0;
 
         tok_skip_whitespace(&t);
-        if (t.pos < t->len && t.sql[t.pos] == ',') t.pos++;
+        if (t.pos < t.len && t.sql[t.pos] == ',') t.pos++;
     } while (1);
 
     return 1;

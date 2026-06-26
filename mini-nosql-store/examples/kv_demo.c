@@ -44,11 +44,10 @@ int main(void) {
     printf("Waiting 2 seconds for session TTL...\n");
     fflush(stdout);
 
-#ifdef _WIN32
-    Sleep(2200);
-#else
-    sleep(2);
-#endif
+    {
+        time_t start = time(NULL);
+        while (time(NULL) - start < 3) { /* busy-wait ~3 seconds */ }
+    }
 
     int cleaned = kv_cleanup_expired(store);
     printf("Expired entries cleaned: %d\n", cleaned);

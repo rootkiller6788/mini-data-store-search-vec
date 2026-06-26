@@ -92,10 +92,25 @@ MVCCTransaction mvcc_get_snapshot(int32_t txn_id) {
     return snap;
 }
 
+/*
+ * L4: MVCC Visibility Rules (Snapshot Isolation)
+ *
+ * 版本 V 对快照 S 可见的条件:
+ *   1. V.txn_begin == S.txn_id → 自己创建，除非被自己删除
+ *   2. V.txn_begin 已提交 且 不在 S 的活跃列表中
+ *   3. V.txn_begin 未中止 (is_aborted)
+ *   4. V.txn_end == 0 或 V.txn_end == S.txn_id (自己删的)
+ *   5. V.txn_end 未提交 (其他人删但未提交)
+ *
+ * 参考: Berenson et al., "A Critique of ANSI SQL Isolation Levels", SIGMOD 1995
+ */
 static bool is_visible(int32_t version_txn_begin, int32_t version_txn_end,
                        MVCCTransaction *snap) {
     if (version_txn_begin == snap->txn_id) {
         return version_txn_end == 0;
+    }
+    if (is_aborted(version_txn_begin)) {
+        return false;
     }
     if (!is_committed(version_txn_begin)) {
         return false;

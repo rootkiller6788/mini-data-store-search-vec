@@ -62,7 +62,10 @@ static QueryNode *parse_atom(const char **s) {
     if (i == 0) return NULL;
 
     QueryNode *n = alloc_node(NODE_TERM);
-    if (n) strncpy(n->term, term, MAX_TERM_LEN - 1);
+    if (n) {
+        strncpy(n->term, term, MAX_TERM_LEN - 1);
+        n->term[MAX_TERM_LEN - 1] = '\0';
+    }
     return n;
 }
 
@@ -94,6 +97,7 @@ static QueryNode *parse_prefix(const char **s) {
             QueryNode *phrase = alloc_node(NODE_PHRASE);
             if (phrase) {
                 strncpy(phrase->term, atom->term, MAX_TERM_LEN - 1);
+                phrase->term[MAX_TERM_LEN - 1] = '\0';
                 QueryNode *right_atom = parse_atom(s);
                 if (right_atom && right_atom->type == NODE_TERM) {
                     phrase->left = atom;

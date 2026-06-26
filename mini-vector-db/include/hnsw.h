@@ -2,6 +2,7 @@
 #define HNSW_H
 
 #include "vector_math.h"
+#include "exact_knn.h"
 
 #define HNSW_MAX_NODES    10000
 #define HNSW_M             16

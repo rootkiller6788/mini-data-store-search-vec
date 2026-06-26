@@ -12,9 +12,6 @@
 #define DIM         128
 #define K           10
 
-extern float knn_recall_at_k(const KNNResult *ground_truth,
-                             const KNNResult *approx, int k);
-
 static void generate_data(Vector *dataset, Vector *queries,
                           int n, int nq, int dim)
 {

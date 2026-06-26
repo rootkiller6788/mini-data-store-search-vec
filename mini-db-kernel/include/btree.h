@@ -9,7 +9,7 @@
 typedef struct BTreeNode {
     bool    is_leaf;
     int32_t keys[BTREE_ORDER];
-    int32_t children[BTREE_ORDER];
+    intptr_t children[BTREE_ORDER];
     int32_t values[BTREE_ORDER];
     int32_t num_keys;
     int32_t page_id;

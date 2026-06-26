@@ -59,11 +59,6 @@ typedef struct {
     int          col_idx;
 } FilterState;
 
-static int filter_col_index(Table *table, const char *name) {
-    /* We need the table; store it in state */
-    return 0;
-}
-
 static void filter_open(Executor *e) {
     FilterState *fs = (FilterState *)e->state;
     exec_open(fs->child);
@@ -152,7 +147,7 @@ static void project_close(Executor *e) {
     e->is_open = 0;
 }
 
-Executor *exec_create_project(Executor *child, int num_cols, char cols[][SQL_MAX_NAME]) {
+Executor *exec_create_project(Executor *child, int num_cols, const char cols[][SQL_MAX_NAME]) {
     Executor *e = calloc(1, sizeof(Executor));
     ProjectState *ps = calloc(1, sizeof(ProjectState));
     ps->child = child;
